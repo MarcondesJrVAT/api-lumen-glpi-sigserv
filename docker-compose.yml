@@ -1,0 +1,67 @@
+version: "3"
+
+services:
+    # image project
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        depends_on:
+            - db
+        networks:
+            - lumen_api
+
+    # nginx
+    nginx:
+        image: nginx:alpine
+        restart: unless-stopped
+        ports:
+            - "8001:80"
+        volumes:
+            - ./:/var/www
+            - ./docker/nginx/:/etc/nginx/conf.d/
+        networks:
+            - lumen_api
+
+    # db mysql
+    db:
+        image: mysql:latest
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE:-laravel}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+            MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+            MYSQL_USER: ${DB_USERNAME:-username}
+        volumes:
+            - ./.docker/mysql/dbdata:/var/lib/mysql
+        ports:
+            - "3306:3306"
+        networks:
+            - lumen_api
+
+    # PHPMyAdmin
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        restart: unless-stopped
+        ports:
+            - "8080:80"
+        environment:
+            PMA_HOST: db
+            PMA_PORT: 3306
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-userpass}
+        networks:
+            - lumen_api
+
+#    redis
+#    redis:
+#        image: redis:latest
+#        networks:
+#            - lumen_api
+
+networks:
+    lumen_api:
+        driver: bridge
